@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     private GridView list;
     private List<ActivityLink> activities;
+    public String userId;
 
     private final String[] PERMISSIONS = {
             Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA,
@@ -54,6 +56,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
+
+        Intent i = getIntent();
+        userId = i.getStringExtra("userId");
+        Log.d("chk", "user userId:" + userId);
 
         list = findViewById(R.id.list);
         createList();
@@ -74,9 +80,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 //    activities.add(
 //        new ActivityLink(new Intent(this, RtspActivity.class), getString(R.string.rtsp_streamer),
 //            JELLY_BEAN));
-        activities.add(new ActivityLink(new Intent(this, ExampleRtmpActivity.class),
+
+        if(userId.equals("admin"))
+        {
+            activities.add(new ActivityLink(new Intent(this, ExampleRtmpActivity.class),
                 getString(R.string.default_rtmp),
                 JELLY_BEAN));
+        }
+
         activities.add(new ActivityLink(new Intent(this, watchingBroadcasting.class),
                 getString(R.string.default_rtsp), JELLY_BEAN));
 //     activities.add(new ActivityLink(new Intent(this, ExampleRtspActivity.class),
