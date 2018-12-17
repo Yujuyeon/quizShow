@@ -61,10 +61,13 @@ public class ExampleRtmpActivity extends AppCompatActivity
     private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
             + "/rtmp-rtsp-stream-client-java");
     Handler handler;
+
     private static final String HOST = "192.168.1.7";
-    private static final int PORT = 5001;
+//    private static final String HOST = "172.30.49.149";
+    private static final int CHAT_PORT = 5001;
+    private static final int QUIZ_PORT = 5002;
     private static final String SUBMIT_QUIZ_ADDRESS = "http://192.168.1.7/getQuiz.php?num=";
-//    private static final String SUBMIT_QUIZ_ADDRESS = "http://172.30.1.1/getQuiz.php?num=";
+//    private static final String SUBMIT_QUIZ_ADDRESS = "localhost/getQuiz.php?num=";
     private SocketChannel socketChannel;
     private int quizNumber;
 
@@ -99,7 +102,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 {
                     socketChannel = SocketChannel.open();
                     socketChannel.configureBlocking(true);
-                    socketChannel.connect(new InetSocketAddress(HOST, PORT));
+                    socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+                    new SendmsgTask().execute("id:admin");
                 }
                 catch (Exception ioe)
                 {
@@ -110,6 +114,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 checkUpdate.start();
             }
         }).start();
+
 
     }
 
@@ -365,7 +370,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 Log.d("php", "보기1: " + examples[0]);
                 Log.d("php", "보기2: " + examples[1]);
                 Log.d("php", "보기3: " + examples[2]);
-                Log.d("php", "정답: " + quizSet[3]);
+//                Log.d("php", "정답: " + quizSet[3]);
 
                 new SendmsgTask().execute("admin: "+result);
 //                new SendmsgTask().execute("asd");

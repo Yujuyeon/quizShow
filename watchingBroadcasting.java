@@ -2,6 +2,7 @@ package com.pedro.rtpstreamer;
 
 import android.app.Activity;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.media.MediaDataSource;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -74,11 +75,13 @@ public class watchingBroadcasting extends AppCompatActivity
 
     //채팅
     Handler handler;
-    String data;
-    SocketChannel socketChannel;
+    String chatData;
+    String quizData;
+    SocketChannel chatChannel;
+    SocketChannel quizChannel;
     private static final String HOST = "192.168.1.7";
-    private static final int PORT = 5001;
-    String msg;
+    private static final int CHAT_PORT = 5001;
+    private static final int QUIZ_PORT = 5002;
     ActivityWatchingBroadcastingBinding binding;
     ArrayList<chat> chatArrayList = new ArrayList<>();
 
@@ -100,10 +103,11 @@ public class watchingBroadcasting extends AppCompatActivity
             {
                 try
                 {
-                    socketChannel = SocketChannel.open();
-                    socketChannel.configureBlocking(true);
-                    socketChannel.connect(new InetSocketAddress(HOST, PORT));
-                    new SendmsgTask().execute(getLocalServerIp() +"|"+USERID);
+                    chatChannel = SocketChannel.open();
+                    chatChannel.configureBlocking(true);
+                    chatChannel.connect(new InetSocketAddress(HOST, CHAT_PORT));
+//                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+                    new SendmsgTask().execute("id:"+USERID);
                 }
                 catch (Exception ioe)
                 {
@@ -111,10 +115,31 @@ public class watchingBroadcasting extends AppCompatActivity
                     ioe.printStackTrace();
 
                 }
-                checkUpdate.start();
+                chatCheckUpdate.start();
             }
         }).start();
 
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    quizChannel = SocketChannel.open();
+                    quizChannel.configureBlocking(true);
+                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+                    new SendmsgTask().execute("id:" + USERID);
+                }
+                catch (Exception ioe)
+                {
+                    Log.d("asd", ioe.getMessage() + "a");
+                    ioe.printStackTrace();
+
+                }
+                quizCheckUpdate.start();
+            }
+        }).start();
 
         binding.sendMsgBtn.setOnClickListener(new View.OnClickListener()
         {
@@ -133,13 +158,14 @@ public class watchingBroadcasting extends AppCompatActivity
                         adapter chatAdapter = new adapter(chatArrayList);
                         chatRecycler.setAdapter(chatAdapter);
                         ((LinearLayoutManager) chatLayoutManager).setStackFromEnd(true);
+
                         if(chatArrayList.size() == 0)
                         {
-                            chatArrayList.add(0, new chat("ann", return_msg));
+                            chatArrayList.add(0, new chat(USERID, return_msg));
                         }
                         else
                         {
-                            chatArrayList.add(chatArrayList.size(), new chat("ann", return_msg));
+                            chatArrayList.add(chatArrayList.size(), new chat(USERID, return_msg));
                         }
                         new SendmsgTask().execute("message: "+return_msg);
                     }
@@ -188,7 +214,7 @@ public class watchingBroadcasting extends AppCompatActivity
         {
             try
             {
-                socketChannel
+                chatChannel
                         .socket()
                         .getOutputStream()
                         .write(strings[0].getBytes("UTF-8")); // 서버로
@@ -221,20 +247,20 @@ public class watchingBroadcasting extends AppCompatActivity
         {
             try
             {
-                ByteBuffer byteBuffer = ByteBuffer.allocate(256);
+                ByteBuffer chatByteBuffer = ByteBuffer.allocate(256);
                 //서버가 비정상적으로 종료했을 경우 IOException 발생
-                int readByteCount = socketChannel.read(byteBuffer); //데이터받기
-                Log.d("readByteCount", readByteCount + "");
+                int chatReadByteCount = chatChannel.read(chatByteBuffer); //데이터받기
+                Log.d("readByteCount", chatReadByteCount + "");
                 //서버가 정상적으로 Socket의 close()를 호출했을 경우
-                if (readByteCount == -1)
+                if (chatReadByteCount == -1)
                 {
                     throw new IOException();
                 }
-
-                byteBuffer.flip(); // 문자열로 변환
+                chatByteBuffer.flip(); // 문자열로 변환
                 Charset charset = Charset.forName("UTF-8");
-                data = charset.decode(byteBuffer).toString();
-                Log.d("receive", "msg :" + data);
+                chatData = charset.decode(chatByteBuffer).toString();
+                Log.d("receive", "msg :" + chatData);
+
                 handler.post(showUpdate);
             }
             catch (IOException e)
@@ -242,7 +268,7 @@ public class watchingBroadcasting extends AppCompatActivity
                 Log.d("getMsg", e.getMessage() + "");
                 try
                 {
-                    socketChannel.close();
+                    chatChannel.close();
                     break;
                 }
                 catch (IOException ee)
@@ -253,15 +279,71 @@ public class watchingBroadcasting extends AppCompatActivity
         }
     }
 
-    private Thread checkUpdate = new Thread()
+    void receiveQuiz()
+    {
+        while (true)
+        {
+            try
+            {
+                ByteBuffer quizByteBuffer = ByteBuffer.allocate(256);
+                //서버가 비정상적으로 종료했을 경우 IOException 발생
+                int quizReadByteCount = quizChannel.read(quizByteBuffer); //데이터받기
+                Log.d("readByteCount", quizReadByteCount + "");
+                //서버가 정상적으로 Socket의 close()를 호출했을 경우
+                if (quizReadByteCount == -1)
+                {
+                    throw new IOException();
+                }
+                quizByteBuffer.flip(); // 문자열로 변환
+                Charset charset = Charset.forName("UTF-8");
+                quizData = charset.decode(quizByteBuffer).toString();
+                Log.d("receive", "quiz:" + quizData);
+
+                Intent i = new Intent(watchingBroadcasting.this, solveQuiz.class);
+                i.putExtra("quizSet", quizData);
+                startActivity(i);
+//                퀴즈 데이터는 문항번호|퀴즈|보기1/2/3 형태로 전달 받음
+
+            }
+            catch (IOException e)
+            {
+                Log.d("getMsg", e.getMessage() + "");
+                try
+                {
+                    chatChannel.close();
+                    break;
+                }
+                catch (IOException ee)
+                {
+                    ee.printStackTrace();
+                }
+            }
+        }
+    }
+    private Thread chatCheckUpdate = new Thread()
     {
 
         public void run()
         {
             try
             {
-                String line;
                 receive();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private Thread quizCheckUpdate = new Thread()
+    {
+
+        public void run()
+        {
+            try
+            {
+                receiveQuiz();
             }
             catch (Exception e)
             {
@@ -275,7 +357,7 @@ public class watchingBroadcasting extends AppCompatActivity
 
         public void run()
         {
-            String receive = "Coming word : " + data;
+            String receive = "Coming word : " + chatData;
             Log.d("getChat", receive);
 
             chatRecycler = findViewById(R.id.chatRecyclerView);
@@ -289,11 +371,11 @@ public class watchingBroadcasting extends AppCompatActivity
 
             if(chatArrayList.size() == 0)
             {
-                chatArrayList.add(0, new chat("ann", data));
+                chatArrayList.add(0, new chat(USERID, chatData));
             }
             else
             {
-                chatArrayList.add(chatArrayList.size(), new chat("ann", data));
+                chatArrayList.add(chatArrayList.size(), new chat(USERID, chatData));
             }
         }
 
@@ -305,7 +387,7 @@ public class watchingBroadcasting extends AppCompatActivity
         super.onDestroy();
         try
         {
-            socketChannel.close();
+            chatChannel.close();
         }
         catch (Exception e)
         {
