@@ -68,7 +68,8 @@ import android.databinding.DataBindingUtil;
 public class watchingBroadcasting extends AppCompatActivity
 {
 
-    private static final String USERID = "TEST";
+    private String userId, counterId;
+//    private static final String userId = "TEST";
     private static final String QUIZADDRESS = "rtmp://192.168.1.7/quiz";
     RecyclerView chatRecycler;
     RecyclerView.LayoutManager chatLayoutManager;
@@ -93,6 +94,8 @@ public class watchingBroadcasting extends AppCompatActivity
 
         //채팅 어뎁터
 
+        Intent i = getIntent();
+        userId = i.getStringExtra("userId");
         //채팅 통신
         binding = DataBindingUtil.setContentView(this, R.layout.activity_watching_broadcasting);
         handler = new Handler();
@@ -107,7 +110,7 @@ public class watchingBroadcasting extends AppCompatActivity
                     chatChannel.configureBlocking(true);
                     chatChannel.connect(new InetSocketAddress(HOST, CHAT_PORT));
 //                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-                    new SendmsgTask().execute("id:"+USERID);
+                    new SendmsgTask().execute("id:"+userId);
                 }
                 catch (Exception ioe)
                 {
@@ -129,7 +132,7 @@ public class watchingBroadcasting extends AppCompatActivity
                     quizChannel = SocketChannel.open();
                     quizChannel.configureBlocking(true);
                     quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-                    new SendmsgTask().execute("id:" + USERID);
+                    new SendQuizTask().execute("id:" + userId);
                 }
                 catch (Exception ioe)
                 {
@@ -161,13 +164,13 @@ public class watchingBroadcasting extends AppCompatActivity
 
                         if(chatArrayList.size() == 0)
                         {
-                            chatArrayList.add(0, new chat(USERID, return_msg));
+                            chatArrayList.add(0, new chat(userId, return_msg));
                         }
                         else
                         {
-                            chatArrayList.add(chatArrayList.size(), new chat(USERID, return_msg));
+                            chatArrayList.add(chatArrayList.size(), new chat(userId, return_msg));
                         }
-                        new SendmsgTask().execute("message: "+return_msg);
+                        new SendmsgTask().execute(userId + "/" + return_msg);
                     }
                 }
                 catch (Exception e)
@@ -241,6 +244,40 @@ public class watchingBroadcasting extends AppCompatActivity
         }
     }
 
+    private class SendQuizTask extends AsyncTask<String, Void, Void>
+    {
+        @Override
+        protected Void doInBackground(String... strings)
+        {
+            try
+            {
+                quizChannel
+                        .socket()
+                        .getOutputStream()
+                        .write(strings[0].getBytes("UTF-8")); // 서버로
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute()
+        {
+            super.onPreExecute();
+            runOnUiThread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    binding.sendMsgEditText.setText("");
+                }
+            });
+        }
+    }
+
     void receive()
     {
         while (true)
@@ -259,6 +296,7 @@ public class watchingBroadcasting extends AppCompatActivity
                 chatByteBuffer.flip(); // 문자열로 변환
                 Charset charset = Charset.forName("UTF-8");
                 chatData = charset.decode(chatByteBuffer).toString();
+                counterId = chatData.split("/")[0];
                 Log.d("receive", "msg :" + chatData);
 
                 handler.post(showUpdate);
@@ -371,11 +409,11 @@ public class watchingBroadcasting extends AppCompatActivity
 
             if(chatArrayList.size() == 0)
             {
-                chatArrayList.add(0, new chat(USERID, chatData));
+                chatArrayList.add(0, new chat(chatData.split("/")[0], chatData.split("/")[1]));
             }
             else
             {
-                chatArrayList.add(chatArrayList.size(), new chat(USERID, chatData));
+                chatArrayList.add(chatArrayList.size(), new chat(chatData.split("/")[0], chatData.split("/")[1]));
             }
         }
 

@@ -129,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             int minSdk = link.getMinSdk();
             if (Build.VERSION.SDK_INT >= minSdk)
             {
+                link.getIntent().putExtra("userId", userId);
                 startActivity(link.getIntent());
                 overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
             }
