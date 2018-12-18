@@ -101,6 +101,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                     }
                 }).start();
                 Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
+                i.putExtra("usrId", userId);
                 startActivity(i);
                 finish();
             }

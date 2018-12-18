@@ -68,7 +68,7 @@ import android.databinding.DataBindingUtil;
 public class watchingBroadcasting extends AppCompatActivity
 {
 
-    private String userId, counterId;
+    private String userId;
 //    private static final String userId = "TEST";
     private static final String QUIZADDRESS = "rtmp://192.168.1.7/quiz";
     RecyclerView chatRecycler;
@@ -96,6 +96,7 @@ public class watchingBroadcasting extends AppCompatActivity
 
         Intent i = getIntent();
         userId = i.getStringExtra("userId");
+
         //채팅 통신
         binding = DataBindingUtil.setContentView(this, R.layout.activity_watching_broadcasting);
         handler = new Handler();
@@ -109,12 +110,11 @@ public class watchingBroadcasting extends AppCompatActivity
                     chatChannel = SocketChannel.open();
                     chatChannel.configureBlocking(true);
                     chatChannel.connect(new InetSocketAddress(HOST, CHAT_PORT));
-//                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
                     new SendmsgTask().execute("id:"+userId);
                 }
                 catch (Exception ioe)
                 {
-                    Log.d("asd", ioe.getMessage() + "a");
+                    Log.d("asd", ioe.getMessage() + "1");
                     ioe.printStackTrace();
 
                 }
@@ -136,7 +136,7 @@ public class watchingBroadcasting extends AppCompatActivity
                 }
                 catch (Exception ioe)
                 {
-                    Log.d("asd", ioe.getMessage() + "a");
+                    Log.d("asd", ioe.getMessage() + "2");
                     ioe.printStackTrace();
 
                 }
@@ -176,6 +176,7 @@ public class watchingBroadcasting extends AppCompatActivity
                 catch (Exception e)
                 {
                     e.printStackTrace();
+                    Log.d("asd", e.getMessage() + "3");
                 }
             }
         });
@@ -262,20 +263,6 @@ public class watchingBroadcasting extends AppCompatActivity
             }
             return null;
         }
-
-        @Override
-        protected void onPreExecute()
-        {
-            super.onPreExecute();
-            runOnUiThread(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    binding.sendMsgEditText.setText("");
-                }
-            });
-        }
     }
 
     void receive()
@@ -296,7 +283,6 @@ public class watchingBroadcasting extends AppCompatActivity
                 chatByteBuffer.flip(); // 문자열로 변환
                 Charset charset = Charset.forName("UTF-8");
                 chatData = charset.decode(chatByteBuffer).toString();
-                counterId = chatData.split("/")[0];
                 Log.d("receive", "msg :" + chatData);
 
                 handler.post(showUpdate);
@@ -337,10 +323,21 @@ public class watchingBroadcasting extends AppCompatActivity
                 quizData = charset.decode(quizByteBuffer).toString();
                 Log.d("receive", "quiz:" + quizData);
 
-                Intent i = new Intent(watchingBroadcasting.this, solveQuiz.class);
-                i.putExtra("quizSet", quizData);
-                startActivity(i);
+//                퀴즈는 내는 경우
+                if(quizData.startsWith("goQuiz"))
+                {
+
 //                퀴즈 데이터는 문항번호|퀴즈|보기1/2/3 형태로 전달 받음
+                    Intent i = new Intent(watchingBroadcasting.this, solveQuiz.class);
+                    i.putExtra("quizSet", quizData.substring(5));
+                    startActivity(i);
+                }
+//                채점하는 경우
+                else
+                {
+                    Log.d("chk", "채점확인: " + quizData);
+                }
+
 
             }
             catch (IOException e)

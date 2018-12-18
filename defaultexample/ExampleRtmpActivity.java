@@ -1,6 +1,7 @@
 package com.pedro.rtpstreamer.defaultexample;
 
 import android.app.ProgressDialog;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -53,6 +54,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
 
     private RtmpCamera1 rtmpCamera1;
     private Button button, goQuiz;
+    private Boolean quizOrScore;
     private Button bRecord;
     private EditText etUrl;
     private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
@@ -90,6 +92,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
         etUrl.setHint(R.string.hint_rtmp);
         rtmpCamera1 = new RtmpCamera1(surfaceView, this);
         surfaceView.getHolder().addCallback(this);
+        quizNumber = 1;
 
         //퀴즈 통신 접
         handler = new Handler();
@@ -214,6 +217,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                     rtmpCamera1.stopStream();
                 }
                 break;
+
             case R.id.switch_camera:
                 try
                 {
@@ -224,6 +228,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                     Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
                 break;
+
             case R.id.b_record:
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
                 {
@@ -283,15 +288,33 @@ public class ExampleRtmpActivity extends AppCompatActivity
                             Toast.LENGTH_SHORT).show();
                 }
 
-
             case R.id.goQuiz:
                 Log.d("php", "o");
 
-        //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
-                GetData task = new GetData();
-                quizNumber = 7;
-                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
-                quizNumber++;
+                if(quizOrScore)
+                {
+                    goQuiz.setText("채점하기");
+                    quizOrScore = false;
+                    new SendmsgTask().execute("correntOrNot");
+                }
+                else
+                {
+                    goQuiz.setText("퀴즈내기");
+                    quizOrScore = true;
+
+                    //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
+                    GetData task = new GetData();
+                    task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
+                    quizNumber++;
+
+                    if(quizNumber == 3)
+                    {
+                        goQuiz.setText("퀴즈 마감");
+                        goQuiz.setBackgroundColor(Color.rgb(255, 0,0));
+                    }
+
+                }
+
 
                 break;
             default:
