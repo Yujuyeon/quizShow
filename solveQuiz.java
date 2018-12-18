@@ -68,7 +68,8 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
         example2TV.setText(example2);
         example3TV.setText(example3);
 
-        userId = "TEST";
+        Intent intent = getIntent();
+        userId = intent.getStringExtra("userId");
 
         //5초 후 화면이 닫히는 핸들
         new Handler().postDelayed(new Runnable()
@@ -101,8 +102,20 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                     }
                 }).start();
                 Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
-                i.putExtra("usrId", userId);
+                i.putExtra("userId", userId);
+                i.putExtra("deserveScore", true);
+
+//                try
+//                {
+//                    socketChannel.close();
+//                }
+//                catch (IOException e)
+//                {
+//                    e.printStackTrace();
+//                }
+
                 startActivity(i);
+
                 finish();
             }
         }, 5000);
@@ -136,7 +149,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
             switch(v.getId())
             {
                 case R.id.example1:
-                        example1TV.setBackgroundColor(Color.rgb(255,0,0));
+                        example1TV.setBackgroundColor(Color.rgb(0,255,0));
                         userAnswer = 1;
                         isCheckedQuiz = true;
                         break;
@@ -148,7 +161,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                         break;
 
                 case R.id.example3:
-                        example3TV.setBackgroundColor(Color.rgb(0,0,255));
+                        example3TV.setBackgroundColor(Color.rgb(0,255,0));
                         userAnswer = 3;
                         isCheckedQuiz = true;
                         break;

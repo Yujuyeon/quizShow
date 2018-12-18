@@ -53,8 +53,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
 {
 
     private RtmpCamera1 rtmpCamera1;
-    private Button button, goQuiz;
-    private Boolean quizOrScore;
+    private Button button, goQuiz, quizScore;
+    private Boolean quizOrScore = false;
     private Button bRecord;
     private EditText etUrl;
     private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
@@ -84,6 +84,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
         button.setOnClickListener(this);
         goQuiz = findViewById(R.id.goQuiz);
         goQuiz.setOnClickListener(this);
+        quizScore = findViewById(R.id.quizScore);
+        quizScore.setOnClickListener(this);
         bRecord = findViewById(R.id.b_record);
         bRecord.setOnClickListener(this);
         Button switchCamera = findViewById(R.id.switch_camera);
@@ -287,36 +289,41 @@ public class ExampleRtmpActivity extends AppCompatActivity
                     Toast.makeText(this, "You need min JELLY_BEAN_MR2(API 18) for do it...",
                             Toast.LENGTH_SHORT).show();
                 }
+                break;
 
             case R.id.goQuiz:
                 Log.d("php", "o");
 
-                if(quizOrScore)
+//                if(quizOrScore)
+//                {
+//                    goQuiz.setText("채점 하기");
+//                    quizOrScore = false;
+//                    new SendmsgTask().execute("correctOrNot");
+//                }
+//                else
                 {
-                    goQuiz.setText("채점하기");
-                    quizOrScore = false;
-                    new SendmsgTask().execute("correntOrNot");
-                }
-                else
-                {
-                    goQuiz.setText("퀴즈내기");
-                    quizOrScore = true;
+//                    goQuiz.setText("퀴즈 내기");
+//                    quizOrScore = true;
 
                     //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
                     GetData task = new GetData();
                     task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
                     quizNumber++;
 
-                    if(quizNumber == 3)
+                    if(quizNumber == 4)
                     {
                         goQuiz.setText("퀴즈 마감");
                         goQuiz.setBackgroundColor(Color.rgb(255, 0,0));
                     }
 
                 }
-
-
                 break;
+
+            case R.id.quizScore:
+                quizOrScore = true;
+                new SendmsgTask().execute("score");
+                break;
+
             default:
                 break;
         }

@@ -64,27 +64,26 @@ import java.util.Enumeration;
 import java.util.HashMap;
 
 import android.databinding.DataBindingUtil;
+import android.widget.Toast;
 
 public class watchingBroadcasting extends AppCompatActivity
 {
 
-    private String userId;
 //    private static final String userId = "TEST";
     private static final String QUIZADDRESS = "rtmp://192.168.1.7/quiz";
     RecyclerView chatRecycler;
     RecyclerView.LayoutManager chatLayoutManager;
 
     //채팅
-    Handler handler;
-    String chatData;
-    String quizData;
-    SocketChannel chatChannel;
-    SocketChannel quizChannel;
+    private Handler handler;
+    private String chatData, quizData, userId;
+    SocketChannel chatChannel, quizChannel;
     private static final String HOST = "192.168.1.7";
     private static final int CHAT_PORT = 5001;
     private static final int QUIZ_PORT = 5002;
     ActivityWatchingBroadcastingBinding binding;
     ArrayList<chat> chatArrayList = new ArrayList<>();
+    private boolean deserveScore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -96,7 +95,9 @@ public class watchingBroadcasting extends AppCompatActivity
 
         Intent i = getIntent();
         userId = i.getStringExtra("userId");
+        deserveScore = i.getBooleanExtra("deserveScore", false);
 
+        Log.d("chk", "유저 아이디: " + userId);
         //채팅 통신
         binding = DataBindingUtil.setContentView(this, R.layout.activity_watching_broadcasting);
         handler = new Handler();
@@ -129,10 +130,16 @@ public class watchingBroadcasting extends AppCompatActivity
             {
                 try
                 {
+                    Log.d("asd", "oo");
                     quizChannel = SocketChannel.open();
                     quizChannel.configureBlocking(true);
                     quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
                     new SendQuizTask().execute("id:" + userId);
+
+                    if(deserveScore)
+                    {
+                        new SendQuizTask().execute("correctOrNot");
+                    }
                 }
                 catch (Exception ioe)
                 {
@@ -143,6 +150,8 @@ public class watchingBroadcasting extends AppCompatActivity
                 quizCheckUpdate.start();
             }
         }).start();
+
+
 
         binding.sendMsgBtn.setOnClickListener(new View.OnClickListener()
         {
@@ -330,15 +339,17 @@ public class watchingBroadcasting extends AppCompatActivity
 //                퀴즈 데이터는 문항번호|퀴즈|보기1/2/3 형태로 전달 받음
                     Intent i = new Intent(watchingBroadcasting.this, solveQuiz.class);
                     i.putExtra("quizSet", quizData.substring(5));
+                    i.putExtra("userId", userId);
+                    quizChannel.close();
                     startActivity(i);
+//                    finish();
                 }
 //                채점하는 경우
                 else
                 {
+                    Toast.makeText(this, "채점 결과: " + quizData, Toast.LENGTH_SHORT).show();
                     Log.d("chk", "채점확인: " + quizData);
                 }
-
-
             }
             catch (IOException e)
             {
