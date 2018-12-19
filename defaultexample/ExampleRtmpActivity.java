@@ -1,12 +1,17 @@
 package com.pedro.rtpstreamer.defaultexample;
 
 import android.app.ProgressDialog;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
@@ -24,6 +29,7 @@ import com.pedro.rtpstreamer.R;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 import com.pedro.rtpstreamer.chat.adapter;
 import com.pedro.rtpstreamer.chat.chat;
+import com.pedro.rtpstreamer.quizService;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -51,6 +57,25 @@ import net.ossrs.rtmp.ConnectCheckerRtmp;
 public class ExampleRtmpActivity extends AppCompatActivity
         implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback
 {
+    //퀴즈 서비스 변수 모
+    quizService myService;
+    boolean isService;
+    ServiceConnection serviceConnection = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service)
+        {
+            quizService.MyBinder myBinder = (quizService.MyBinder) service;
+            myService = myBinder.getService();
+            isService = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name)
+        {
+            isService = false;
+        }
+    };
 
     private RtmpCamera1 rtmpCamera1;
     private Button button, goQuiz, quizScore;
@@ -58,7 +83,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
     private Button bRecord;
     private EditText etUrl;
     private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
-//    private static final String BROADCAST_ADDRESS = "rtmp://localhost/quiz";
+    //    private static final String BROADCAST_ADDRESS = "rtmp://localhost/quiz";
 //    private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
     private String currentDateAndTime = "", data;
     private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
@@ -78,6 +103,10 @@ public class ExampleRtmpActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_example);
+
+        Intent intent = new Intent(this, quizService.class);
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+
         SurfaceView surfaceView = findViewById(R.id.surfaceView);
         button = findViewById(R.id.b_start_stop);
         button.setOnClickListener(this);
@@ -97,27 +126,27 @@ public class ExampleRtmpActivity extends AppCompatActivity
 
         //퀴즈 통신 접
         handler = new Handler();
-        new Thread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                try
-                {
-                    socketChannel = SocketChannel.open();
-                    socketChannel.configureBlocking(true);
-                    socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-                    new SendmsgTask().execute("id:admin");
-                }
-                catch (Exception ioe)
-                {
-                    Log.d("asd", ioe.getMessage() + "a");
-                    ioe.printStackTrace();
-
-                }
-                checkUpdate.start();
-            }
-        }).start();
+//        new Thread(new Runnable()
+//        {
+//            @Override
+//            public void run()
+//            {
+//                try
+//                {
+//                    socketChannel = SocketChannel.open();
+//                    socketChannel.configureBlocking(true);
+//                    socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+//                    new SendmsgTask().execute("id:admin");
+//                }
+//                catch (Exception ioe)
+//                {
+//                    Log.d("asd", ioe.getMessage() + "a");
+//                    ioe.printStackTrace();
+//
+//                }
+//                checkUpdate.start();
+//            }
+//        }).start();
 
 
     }
@@ -294,15 +323,17 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 Log.d("php", "o");
 
                 //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
-                new SendmsgTask().execute("quiz/"+quizNumber);
+                Log.d("chk", myService.getData(quizService.getDataPurpose.QUIZ));
+                myService.getData(quizService.getDataPurpose.QUIZ);
+//                new SendmsgTask().execute("quiz/" + quizNumber);
 //                GetData task = new GetData();
 //                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
-                quizNumber++;
+//                quizNumber++;
 
-                if(quizNumber == 4)
+                if (quizNumber == 4)
                 {
                     goQuiz.setText("퀴즈 마감");
-                    goQuiz.setBackgroundColor(Color.rgb(255, 0,0));
+                    goQuiz.setBackgroundColor(Color.rgb(255, 0, 0));
                 }
 
                 break;
@@ -349,7 +380,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
         rtmpCamera1.stopPreview();
     }
 
-//    php 에서 값 가져옴. 라라벨로 변경 필요
+    //    php 에서 값 가져옴. 라라벨로 변경 필요
     private class GetData extends AsyncTask<String, Void, String>
     {
 
@@ -390,7 +421,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 Log.d("php", "보기3: " + examples[2]);
 //                Log.d("php", "정답: " + quizSet[3]);
 
-                new SendmsgTask().execute("admin: "+result);
+                new SendmsgTask().execute("admin: " + result);
 //                new SendmsgTask().execute("asd");
             }
         }

@@ -2,13 +2,17 @@ package com.pedro.rtpstreamer;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.MediaDataSource;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -69,6 +73,25 @@ import android.widget.Toast;
 
 public class watchingBroadcasting extends AppCompatActivity
 {
+    //퀴즈 서비스 변수 모
+    quizService myService;
+    boolean isService;
+    ServiceConnection serviceConnection = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service)
+        {
+            quizService.MyBinder myBinder = (quizService.MyBinder) service;
+            myService = myBinder.getService();
+            isService = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name)
+        {
+            isService = false;
+        }
+    };
 
     //    private static final String userId = "TEST";
     private static final String QUIZADDRESS = "rtmp://192.168.1.7/quiz";
@@ -90,6 +113,9 @@ public class watchingBroadcasting extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watching_broadcasting);
+
+        Intent intent = new Intent(this, quizService.class);
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
 
         Intent i = getIntent();
         userId = i.getStringExtra("userId");
@@ -122,30 +148,29 @@ public class watchingBroadcasting extends AppCompatActivity
             }
         }).start();
 
-        new Thread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                try
-                {
-                    Log.d("asd", "oo");
-                    quizChannel = SocketChannel.open();
-                    quizChannel.configureBlocking(true);
-                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-                    new SendQuizTask().execute("id:" + userId);
-//                        quizChannel.close();
-                }
-                catch (Exception ioe)
-                {
-                    Log.d("asd", ioe.getMessage() + "2");
-                    ioe.printStackTrace();
-
-                }
-                quizCheckUpdate.start();
-            }
-        }).start();
-
+//        new Thread(new Runnable()
+//        {
+//            @Override
+//            public void run()
+//            {
+//                try
+//                {
+//                    Log.d("asd", "oo");
+//                    quizChannel = SocketChannel.open();
+//                    quizChannel.configureBlocking(true);
+//                    quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+//                    new SendQuizTask().execute("id:" + userId);
+////                        quizChannel.close();
+//                }
+//                catch (Exception ioe)
+//                {
+//                    Log.d("asd", ioe.getMessage() + "2");
+//                    ioe.printStackTrace();
+//
+//                }
+//                quizCheckUpdate.start();
+//            }
+//        }).start();
 
         binding.sendMsgBtn.setOnClickListener(new View.OnClickListener()
         {
@@ -217,6 +242,7 @@ public class watchingBroadcasting extends AppCompatActivity
     protected void onStop()
     {
         super.onStop();
+        unbindService(serviceConnection);
         try
         {
             quizChannel.close();
