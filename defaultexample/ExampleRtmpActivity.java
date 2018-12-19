@@ -58,6 +58,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
     private Button bRecord;
     private EditText etUrl;
     private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
+//    private static final String BROADCAST_ADDRESS = "rtmp://localhost/quiz";
 //    private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
     private String currentDateAndTime = "", data;
     private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
@@ -65,11 +66,9 @@ public class ExampleRtmpActivity extends AppCompatActivity
     Handler handler;
 
     private static final String HOST = "192.168.1.7";
-//    private static final String HOST = "172.30.49.149";
     private static final int CHAT_PORT = 5001;
     private static final int QUIZ_PORT = 5002;
     private static final String SUBMIT_QUIZ_ADDRESS = "http://192.168.1.7/getQuiz.php?num=";
-//    private static final String SUBMIT_QUIZ_ADDRESS = "localhost/getQuiz.php?num=";
     private SocketChannel socketChannel;
     private int quizNumber;
 
@@ -294,29 +293,18 @@ public class ExampleRtmpActivity extends AppCompatActivity
             case R.id.goQuiz:
                 Log.d("php", "o");
 
-//                if(quizOrScore)
-//                {
-//                    goQuiz.setText("채점 하기");
-//                    quizOrScore = false;
-//                    new SendmsgTask().execute("correctOrNot");
-//                }
-//                else
+                //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
+                new SendmsgTask().execute("quiz/"+quizNumber);
+//                GetData task = new GetData();
+//                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
+                quizNumber++;
+
+                if(quizNumber == 4)
                 {
-//                    goQuiz.setText("퀴즈 내기");
-//                    quizOrScore = true;
-
-                    //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
-                    GetData task = new GetData();
-                    task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
-                    quizNumber++;
-
-                    if(quizNumber == 4)
-                    {
-                        goQuiz.setText("퀴즈 마감");
-                        goQuiz.setBackgroundColor(Color.rgb(255, 0,0));
-                    }
-
+                    goQuiz.setText("퀴즈 마감");
+                    goQuiz.setBackgroundColor(Color.rgb(255, 0,0));
                 }
+
                 break;
 
             case R.id.quizScore:
@@ -506,6 +494,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 }
             });
         }
+
     }
 
     void receive()

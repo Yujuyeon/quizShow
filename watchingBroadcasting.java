@@ -1,6 +1,7 @@
 package com.pedro.rtpstreamer;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaDataSource;
@@ -69,21 +70,20 @@ import android.widget.Toast;
 public class watchingBroadcasting extends AppCompatActivity
 {
 
-//    private static final String userId = "TEST";
+    //    private static final String userId = "TEST";
     private static final String QUIZADDRESS = "rtmp://192.168.1.7/quiz";
     RecyclerView chatRecycler;
     RecyclerView.LayoutManager chatLayoutManager;
 
     //채팅
     private Handler handler;
-    private String chatData, quizData, userId;
+    private String chatData, quizData, userId, correctOrNot;
     SocketChannel chatChannel, quizChannel;
     private static final String HOST = "192.168.1.7";
     private static final int CHAT_PORT = 5001;
     private static final int QUIZ_PORT = 5002;
     ActivityWatchingBroadcastingBinding binding;
     ArrayList<chat> chatArrayList = new ArrayList<>();
-    private boolean deserveScore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -91,18 +91,18 @@ public class watchingBroadcasting extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watching_broadcasting);
 
-        //채팅 어뎁터
-
         Intent i = getIntent();
         userId = i.getStringExtra("userId");
-        deserveScore = i.getBooleanExtra("deserveScore", false);
+        correctOrNot = i.getStringExtra("correctOrNot");
 
         Log.d("chk", "유저 아이디: " + userId);
         //채팅 통신
         binding = DataBindingUtil.setContentView(this, R.layout.activity_watching_broadcasting);
         handler = new Handler();
+
         new Thread(new Runnable()
         {
+
             @Override
             public void run()
             {
@@ -111,13 +111,12 @@ public class watchingBroadcasting extends AppCompatActivity
                     chatChannel = SocketChannel.open();
                     chatChannel.configureBlocking(true);
                     chatChannel.connect(new InetSocketAddress(HOST, CHAT_PORT));
-                    new SendmsgTask().execute("id:"+userId);
+                    new SendmsgTask().execute("id:" + userId);
                 }
                 catch (Exception ioe)
                 {
                     Log.d("asd", ioe.getMessage() + "1");
                     ioe.printStackTrace();
-
                 }
                 chatCheckUpdate.start();
             }
@@ -135,11 +134,7 @@ public class watchingBroadcasting extends AppCompatActivity
                     quizChannel.configureBlocking(true);
                     quizChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
                     new SendQuizTask().execute("id:" + userId);
-
-                    if(deserveScore)
-                    {
-                        new SendQuizTask().execute("correctOrNot");
-                    }
+//                        quizChannel.close();
                 }
                 catch (Exception ioe)
                 {
@@ -150,7 +145,6 @@ public class watchingBroadcasting extends AppCompatActivity
                 quizCheckUpdate.start();
             }
         }).start();
-
 
 
         binding.sendMsgBtn.setOnClickListener(new View.OnClickListener()
@@ -171,7 +165,7 @@ public class watchingBroadcasting extends AppCompatActivity
                         chatRecycler.setAdapter(chatAdapter);
                         ((LinearLayoutManager) chatLayoutManager).setStackFromEnd(true);
 
-                        if(chatArrayList.size() == 0)
+                        if (chatArrayList.size() == 0)
                         {
                             chatArrayList.add(0, new chat(userId, return_msg));
                         }
@@ -217,6 +211,21 @@ public class watchingBroadcasting extends AppCompatActivity
         player.prepare(videoSource);
         player.setPlayWhenReady(true);
 
+    }
+
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        try
+        {
+            quizChannel.close();
+            chatChannel.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     //서버로 채팅 전달
@@ -322,6 +331,7 @@ public class watchingBroadcasting extends AppCompatActivity
                 //서버가 비정상적으로 종료했을 경우 IOException 발생
                 int quizReadByteCount = quizChannel.read(quizByteBuffer); //데이터받기
                 Log.d("readByteCount", quizReadByteCount + "");
+
                 //서버가 정상적으로 Socket의 close()를 호출했을 경우
                 if (quizReadByteCount == -1)
                 {
@@ -330,25 +340,28 @@ public class watchingBroadcasting extends AppCompatActivity
                 quizByteBuffer.flip(); // 문자열로 변환
                 Charset charset = Charset.forName("UTF-8");
                 quizData = charset.decode(quizByteBuffer).toString();
-                Log.d("receive", "quiz:" + quizData);
 
+                Log.d("quizServer", "watchShow :" + quizData);
+//                Log.d("quizServer", quizData);
 //                퀴즈는 내는 경우
-                if(quizData.startsWith("goQuiz"))
+                if (quizData.startsWith("goQuiz"))
                 {
 
 //                퀴즈 데이터는 문항번호|퀴즈|보기1/2/3 형태로 전달 받음
                     Intent i = new Intent(watchingBroadcasting.this, solveQuiz.class);
-                    i.putExtra("quizSet", quizData.substring(5));
+                    i.putExtra("quizSet", quizData.substring(6));
                     i.putExtra("userId", userId);
                     quizChannel.close();
                     startActivity(i);
 //                    finish();
                 }
 //                채점하는 경우
-                else
+                else if (quizData.equals("score"))
                 {
-                    Toast.makeText(this, "채점 결과: " + quizData, Toast.LENGTH_SHORT).show();
-                    Log.d("chk", "채점확인: " + quizData);
+                    Log.d("quizServer", "채점");
+                    Intent i = new Intent(this, correctOrNot.class);
+                    i.putExtra("quizResult", correctOrNot);
+                    startActivity(i);
                 }
             }
             catch (IOException e)
@@ -366,6 +379,7 @@ public class watchingBroadcasting extends AppCompatActivity
             }
         }
     }
+
     private Thread chatCheckUpdate = new Thread()
     {
 
@@ -415,7 +429,7 @@ public class watchingBroadcasting extends AppCompatActivity
             adapter chatAdapter = new adapter(chatArrayList);
             chatRecycler.setAdapter(chatAdapter);
 
-            if(chatArrayList.size() == 0)
+            if (chatArrayList.size() == 0)
             {
                 chatArrayList.add(0, new chat(chatData.split("/")[0], chatData.split("/")[1]));
             }
@@ -445,10 +459,10 @@ public class watchingBroadcasting extends AppCompatActivity
     {
         try
         {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();)
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); )
             {
                 NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();)
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); )
                 {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && inetAddress.isSiteLocalAddress())
@@ -458,8 +472,38 @@ public class watchingBroadcasting extends AppCompatActivity
                 }
             }
         }
-        catch (SocketException ex) {}
+        catch (SocketException ex)
+        {
+        }
         return null;
     }
+    @Override
+    public void onBackPressed() {
+
+        // Alert을 이용해 종료시키기
+        AlertDialog.Builder dialog = new AlertDialog.Builder(watchingBroadcasting.this);
+        dialog  .setTitle("종료 알림")
+                .setMessage("정말 종료하시겠습니까?")
+                .setPositiveButton("종료합니다", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                })
+                .setNeutralButton("취소합니다", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Toast.makeText(watchingBroadcasting.this, "취소했습니다", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("아니요", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Toast.makeText(watchingBroadcasting.this, "종료하지 않습니다", Toast.LENGTH_SHORT).show();
+                    }
+                }).create().show();
+    }
+
+
 
 }

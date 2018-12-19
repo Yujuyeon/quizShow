@@ -15,15 +15,17 @@ import android.widget.TextView;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Set;
 
 public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 {
-    private String question, example1, example2, example3, quizNumber, userId;
+    private String question, example1, example2, example3, userId, data;
     private String[] quizSet, exampleSet;
     private boolean isCheckedQuiz, isChecked1, isChecked2, isChecked3;
-    private int userAnswer;
+    private int quizNumber, userAnswer;
 
     //퀴즈 응답
     Handler handler;
@@ -55,22 +57,25 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 
         quizSet = i.getStringExtra("quizSet").split("\\|");
 
-        quizNumber = quizSet[0] + "번 문제";
+        quizNumber = Integer.parseInt(quizSet[0]);
         question = quizSet[1];
         exampleSet = quizSet[2].split("/");
         example1 = exampleSet[0];
         example2 = exampleSet[1];
         example3 = exampleSet[2];
 
-        quizNumberTV.setText(quizNumber);
+        quizNumberTV.setText(quizNumber+"번 문제");
         questionTV.setText(question);
         example1TV.setText(example1);
         example2TV.setText(example2);
         example3TV.setText(example3);
 
+        userAnswer = 0;
+
         Intent intent = getIntent();
         userId = intent.getStringExtra("userId");
 
+        Log.d("quizServer", "0");
         //5초 후 화면이 닫히는 핸들
         new Handler().postDelayed(new Runnable()
         {
@@ -85,41 +90,46 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                     {
                         try
                         {
+                            Log.d("quizServer", "1");
                             socketChannel = SocketChannel.open();
                             socketChannel.configureBlocking(true);
                             socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-                            new SendmsgTask().execute("userAnswer|"+quizNumber+"|"+userId+"|"+userAnswer);
-                            Log.d("postQuiz", "5초 직");
+//                            new SendmsgTask().execute("userAnswer|"+quizNumber+"|"+userId+"|"+userAnswer);
+                            new SendmsgTask().execute("userAnswer/"+quizNumber+"/"+userAnswer);
                         }
                         catch (Exception ioe)
                         {
-                            Log.d("asd", ioe.getMessage() + "a");
-                            Log.d("postQuiz", "5초 직ss");
                             ioe.printStackTrace();
-
                         }
-//                        checkUpdate.start();
+                        checkUpdate.start();
+
                     }
                 }).start();
-                Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
-                i.putExtra("userId", userId);
-                i.putExtra("deserveScore", true);
-
-//                try
-//                {
-//                    socketChannel.close();
-//                }
-//                catch (IOException e)
-//                {
-//                    e.printStackTrace();
-//                }
-
-                startActivity(i);
-
-                finish();
+//                Log.d("quizServer", "4");
+//                Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
+//                i.putExtra("userId", userId);
+//                i.putExtra("correctOrNot", data);
+//                Log.d("quizServer", "solveShow: " + data);
+//
+//                startActivity(i);
+//
+//                finish();
             }
         }, 5000);
+    }
 
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        try
+        {
+            socketChannel.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -169,7 +179,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
         }
     }
 
-private class SendmsgTask extends AsyncTask<String, Void, Void>
+    private class SendmsgTask extends AsyncTask<String, Void, Void>
     {
         @Override
         protected Void doInBackground(String... strings)
@@ -200,4 +210,68 @@ private class SendmsgTask extends AsyncTask<String, Void, Void>
                 }
             });
         }
-    }}
+    }
+
+    void receive()
+    {
+        while (true)
+        {
+            try
+            {
+                ByteBuffer byteBuffer = ByteBuffer.allocate(256);
+                //서버가 비정상적으로 종료했을 경우 IOException 발생
+                int readByteCount = socketChannel.read(byteBuffer); //데이터받기
+                Log.d("readByteCount", readByteCount + "");
+                //서버가 정상적으로 Socket의 close()를 호출했을 경우
+                if (readByteCount == -1)
+                {
+                    throw new IOException();
+                }
+
+                byteBuffer.flip(); // 문자열로 변환
+                Charset charset = Charset.forName("UTF-8");
+                data = charset.decode(byteBuffer).toString();
+
+                Log.d("quizServer", "solveQuiz :" + String.valueOf(data));
+                Log.d("quizServer", "4");
+                Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
+                i.putExtra("userId", userId);
+                i.putExtra("correctOrNot", data);
+                Log.d("quizServer", "solveShow: " + data);
+                startActivity(i);
+                finish();
+            }
+            catch (IOException e)
+            {
+                Log.d("getMsg", e.getMessage() + "");
+                try
+                {
+                    socketChannel.close();
+                    break;
+                }
+                catch (IOException ee)
+                {
+                    ee.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private Thread checkUpdate = new Thread()
+    {
+
+        public void run()
+        {
+            try
+            {
+                Log.d("quizServer", "2");
+                String line;
+                receive();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+    };
+}
