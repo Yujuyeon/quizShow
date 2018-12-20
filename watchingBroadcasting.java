@@ -74,7 +74,7 @@ import android.widget.Toast;
 public class watchingBroadcasting extends AppCompatActivity
 {
     //퀴즈 서비스 변수 모
-    quizService myService;
+    quizService quizService;
     boolean isService;
     ServiceConnection serviceConnection = new ServiceConnection()
     {
@@ -82,7 +82,7 @@ public class watchingBroadcasting extends AppCompatActivity
         public void onServiceConnected(ComponentName name, IBinder service)
         {
             quizService.MyBinder myBinder = (quizService.MyBinder) service;
-            myService = myBinder.getService();
+            quizService = myBinder.getService();
             isService = true;
         }
 
@@ -126,6 +126,18 @@ public class watchingBroadcasting extends AppCompatActivity
         binding = DataBindingUtil.setContentView(this, R.layout.activity_watching_broadcasting);
         handler = new Handler();
 
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+//                while(true)
+//                {
+//                    Log.d("chk", quizService.data);
+//
+//                }
+            }
+        }).start();
         new Thread(new Runnable()
         {
 

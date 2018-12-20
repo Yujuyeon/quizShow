@@ -1,10 +1,17 @@
 package com.pedro.rtpstreamer;
 
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,6 +33,28 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
     private String[] quizSet, exampleSet;
     private boolean isCheckedQuiz, isChecked1, isChecked2, isChecked3;
     private int quizNumber, userAnswer;
+    //퀴즈 서비스 변수
+    quizService quizService;
+    boolean isService;
+    ServiceConnection serviceConnection = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service)
+        {
+            quizService.MyBinder myBinder = (quizService.MyBinder) service;
+            quizService = myBinder.getService();
+            isService = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name)
+        {
+            isService = false;
+        }
+    };
+
+    private Messenger mServiceMessenger = null;
+    private boolean mIsBound;
 
     //퀴즈 응답
     Handler handler;
@@ -40,6 +69,10 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_solve_quiz);
+
+        Intent intent = new Intent(this, quizService.class);
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        mIsBound = true;
 
         questionTV = findViewById(R.id.question);
         quizNumberTV = findViewById(R.id.quizNumber);
@@ -64,7 +97,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
         example2 = exampleSet[1];
         example3 = exampleSet[2];
 
-        quizNumberTV.setText(quizNumber+"번 문제");
+        quizNumberTV.setText(quizNumber + "번 문제");
         questionTV.setText(question);
         example1TV.setText(example1);
         example2TV.setText(example2);
@@ -72,39 +105,50 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 
         userAnswer = 0;
 
-        Intent intent = getIntent();
-        userId = intent.getStringExtra("userId");
+//        final Intent intent = getIntent();
+//        userId = intent.getStringExtra("userId");
 
         Log.d("quizServer", "0");
-        //5초 후 화면이 닫히는 핸들
+
         new Handler().postDelayed(new Runnable()
         {
             @Override
             public void run()
             {
-                handler = new Handler();
-                new Thread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        try
-                        {
-                            Log.d("quizServer", "1");
-                            socketChannel = SocketChannel.open();
-                            socketChannel.configureBlocking(true);
-                            socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
-//                            new SendmsgTask().execute("userAnswer|"+quizNumber+"|"+userId+"|"+userAnswer);
-                            new SendmsgTask().execute("userAnswer/"+quizNumber+"/"+userAnswer);
-                        }
-                        catch (Exception ioe)
-                        {
-                            ioe.printStackTrace();
-                        }
-                        checkUpdate.start();
+                quizService.getData(com.pedro.rtpstreamer.quizService.getDataPurpose.ANSWER, quizNumber, userAnswer);
+                finish();
+            }
+        }, 5000);
 
-                    }
-                }).start();
+        //5초 후 화면이 닫히는 핸들
+//        new Handler().postDelayed(new Runnable()
+//        {
+//            @Override
+//            public void run()
+//            {
+//                handler = new Handler();
+//                new Thread(new Runnable()
+//                {
+//                    @Override
+//                    public void run()
+//                    {
+//                        try
+//                        {
+//                            Log.d("quizServer", "1");
+//                            socketChannel = SocketChannel.open();
+//                            socketChannel.configureBlocking(true);
+//                            socketChannel.connect(new InetSocketAddress(HOST, QUIZ_PORT));
+////                            new SendmsgTask().execute("userAnswer|"+quizNumber+"|"+userId+"|"+userAnswer);
+//                            new SendmsgTask().execute("userAnswer/"+quizNumber+"/"+userAnswer);
+//                        }
+//                        catch (Exception ioe)
+//                        {
+//                            ioe.printStackTrace();
+//                        }
+//                        checkUpdate.start();
+//
+//                    }
+//                }).start();
 //                Log.d("quizServer", "4");
 //                Intent i = new Intent(solveQuiz.this, watchingBroadcasting.class);
 //                i.putExtra("userId", userId);
@@ -114,23 +158,8 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 //                startActivity(i);
 //
 //                finish();
-            }
-        }, 5000);
     }
 
-    @Override
-    protected void onStop()
-    {
-        super.onStop();
-        try
-        {
-            socketChannel.close();
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event)
@@ -154,27 +183,30 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
     public void onClick(View v)
     {
 
-        if(!isCheckedQuiz)
+        if (!isCheckedQuiz)
         {
-            switch(v.getId())
+            switch (v.getId())
             {
                 case R.id.example1:
-                        example1TV.setBackgroundColor(Color.rgb(0,255,0));
-                        userAnswer = 1;
-                        isCheckedQuiz = true;
-                        break;
+                    example1TV.setBackgroundColor(Color.rgb(0, 255, 0));
+                    userAnswer = 1;
+                    isCheckedQuiz = true;
+                    break;
 
                 case R.id.example2:
-                        example2TV.setBackgroundColor(Color.rgb(0,255,0));
-                        userAnswer = 2;
-                        isCheckedQuiz = true;
-                        break;
+                    example2TV.setBackgroundColor(Color.rgb(0, 255, 0));
+                    userAnswer = 2;
+                    isCheckedQuiz = true;
+                    break;
 
                 case R.id.example3:
-                        example3TV.setBackgroundColor(Color.rgb(0,255,0));
-                        userAnswer = 3;
-                        isCheckedQuiz = true;
-                        break;
+                    example3TV.setBackgroundColor(Color.rgb(0, 255, 0));
+                    userAnswer = 3;
+                    isCheckedQuiz = true;
+                    break;
+
+                default:
+                    break;
             }
         }
     }

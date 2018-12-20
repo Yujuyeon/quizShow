@@ -57,7 +57,7 @@ import net.ossrs.rtmp.ConnectCheckerRtmp;
 public class ExampleRtmpActivity extends AppCompatActivity
         implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback
 {
-    //퀴즈 서비스 변수 모
+    //퀴즈 서비스 변수
     quizService myService;
     boolean isService;
     ServiceConnection serviceConnection = new ServiceConnection()
@@ -323,8 +323,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 Log.d("php", "o");
 
                 //    퀴즈내고 사용자에게 전달하기 위한 네티 통신
-                Log.d("chk", myService.getData(quizService.getDataPurpose.QUIZ));
-                myService.getData(quizService.getDataPurpose.QUIZ);
+//                Log.d("chk", myService.getData(quizService.getDataPurpose.QUIZ));
+                myService.getData(quizService.getDataPurpose.QUIZ, quizNumber, 0);
 //                new SendmsgTask().execute("quiz/" + quizNumber);
 //                GetData task = new GetData();
 //                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
