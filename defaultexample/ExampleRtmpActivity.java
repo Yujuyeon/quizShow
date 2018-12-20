@@ -79,7 +79,6 @@ public class ExampleRtmpActivity extends AppCompatActivity
 
     private RtmpCamera1 rtmpCamera1;
     private Button button, goQuiz, quizScore;
-    private Boolean quizOrScore = false;
     private Button bRecord;
     private EditText etUrl;
     private static final String BROADCAST_ADDRESS = "rtmp://192.168.1.7/quiz";
@@ -94,6 +93,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
     private static final int CHAT_PORT = 5001;
     private static final int QUIZ_PORT = 5002;
     private static final String SUBMIT_QUIZ_ADDRESS = "http://192.168.1.7/getQuiz.php?num=";
+    private static final int LAST_QUESTION_NUMBER = 3;
     private SocketChannel socketChannel;
     private int quizNumber;
 
@@ -330,7 +330,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
 //                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
                 quizNumber++;
 
-                if (quizNumber == 4)
+                if (quizNumber > LAST_QUESTION_NUMBER)
                 {
                     goQuiz.setText("퀴즈 마감");
                     goQuiz.setBackgroundColor(Color.rgb(255, 0, 0));
@@ -339,9 +339,26 @@ public class ExampleRtmpActivity extends AppCompatActivity
                 break;
 
             case R.id.quizScore:
-                quizOrScore = true;
-                myService.getData(quizService.getDataPurpose.SCORE, quizNumber, 0);
-//                new SendmsgTask().execute("score");
+                if (quizNumber-1 <= LAST_QUESTION_NUMBER+1)
+                {
+                    Log.d("chk", "curLast/"+quizNumber+"/"+LAST_QUESTION_NUMBER);
+
+                    myService.getData(quizService.getDataPurpose.SCORE, quizNumber, 0);
+
+                    if(quizNumber > LAST_QUESTION_NUMBER)
+                    {
+                        quizScore.setText("우승 발표");
+                        quizScore.setBackgroundColor(Color.rgb(255, 0, 0));
+                        quizNumber = quizNumber +2;
+                    }
+                }
+                else
+                {
+                    Log.d("chk", "2");
+                    Log.d("chk", "curLast/"+quizNumber+"/"+LAST_QUESTION_NUMBER);
+                    myService.getData(quizService.getDataPurpose.WINNER, 0, 0);
+                }
+
                 break;
 
             default:

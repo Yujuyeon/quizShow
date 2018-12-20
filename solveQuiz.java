@@ -118,7 +118,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                 quizService.getData(com.pedro.rtpstreamer.quizService.getDataPurpose.ANSWER, quizNumber, userAnswer);
                 finish();
             }
-        }, 5000);
+        }, 1000);
 
         //5초 후 화면이 닫히는 핸들
 //        new Handler().postDelayed(new Runnable()
