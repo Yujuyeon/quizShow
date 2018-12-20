@@ -18,15 +18,16 @@ public class correctOrNot extends AppCompatActivity
         quizResultTV = findViewById(R.id.quizResult);
 
         Intent i = getIntent();
-        String quizResult = i.getStringExtra("quizResult");
+//        String quizResult = i.getStringExtra("quizResult");
+        boolean quizResult = i.getBooleanExtra("quizResult", false);
 
-        if(quizResult.equals("x"))
+        if(quizResult)
         {
-            quizResultTV.setText("틀렸습니다.");
+            quizResultTV.setText("정답입니다");
         }
         else
         {
-            quizResultTV.setText("정답입니니.");
+            quizResultTV.setText("틀렸습니다");
         }
     }
 }

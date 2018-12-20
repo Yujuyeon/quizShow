@@ -328,7 +328,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
 //                new SendmsgTask().execute("quiz/" + quizNumber);
 //                GetData task = new GetData();
 //                task.execute(SUBMIT_QUIZ_ADDRESS+quizNumber, "");
-//                quizNumber++;
+                quizNumber++;
 
                 if (quizNumber == 4)
                 {
@@ -340,7 +340,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
 
             case R.id.quizScore:
                 quizOrScore = true;
-                new SendmsgTask().execute("score");
+                myService.getData(quizService.getDataPurpose.SCORE, quizNumber, 0);
+//                new SendmsgTask().execute("score");
                 break;
 
             default:
