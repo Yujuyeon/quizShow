@@ -21,11 +21,14 @@ import android.view.Window;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Set;
+
+import static java.lang.Thread.sleep;
 
 public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 {
@@ -53,16 +56,16 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
         }
     };
 
-    private Messenger mServiceMessenger = null;
-    private boolean mIsBound;
-
     //퀴즈 응답
     Handler handler;
     SocketChannel socketChannel;
     private static final String HOST = "192.168.1.7";
     private static final int QUIZ_PORT = 5002;
 
-    TextView quizNumberTV, questionTV, example1TV, example2TV, example3TV;
+    Handler countDownHandler;
+    int countDownNumber;
+
+    TextView quizNumberTV, questionTV, example1TV, example2TV, example3TV, countDownTV;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -72,7 +75,6 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 
         Intent intent = new Intent(this, quizService.class);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-        mIsBound = true;
 
         questionTV = findViewById(R.id.question);
         quizNumberTV = findViewById(R.id.quizNumber);
@@ -83,6 +85,42 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
         example1TV.setOnClickListener(this);
         example2TV.setOnClickListener(this);
         example3TV.setOnClickListener(this);
+
+        countDownTV = findViewById(R.id.countDown);
+        countDownHandler = new Handler()
+        {
+            @Override
+            public void handleMessage(Message msg)
+            {
+                super.handleMessage(msg);
+                countDownTV.setText(msg.arg1+"");
+                countDownNumber--;
+            }
+        };
+
+        Thread countDownThread = new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                countDownNumber = 5;
+                while(countDownNumber > 0)
+                {
+                    Message msg = countDownHandler.obtainMessage();
+                    msg.arg1 = countDownNumber;
+                    countDownHandler.sendMessage(msg);
+                    try
+                    {
+                        Thread.sleep(1000);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        countDownThread.start();
 
 
         Intent i = getIntent();
@@ -110,6 +148,7 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 
         Log.d("quizServer", "0");
 
+
         new Handler().postDelayed(new Runnable()
         {
             @Override
@@ -118,7 +157,10 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
                 quizService.getData(com.pedro.rtpstreamer.quizService.getDataPurpose.ANSWER, quizNumber, userAnswer);
                 finish();
             }
-        }, 1000);
+        }, 5000);
+
+
+
 
         //5초 후 화면이 닫히는 핸들
 //        new Handler().postDelayed(new Runnable()
@@ -159,7 +201,6 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
 //
 //                finish();
     }
-
 
     @Override
     public boolean onTouchEvent(MotionEvent event)
@@ -306,4 +347,6 @@ public class solveQuiz extends AppCompatActivity implements View.OnClickListener
             }
         }
     };
+
+
 }
